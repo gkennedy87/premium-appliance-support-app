@@ -93,9 +93,17 @@ export default withPageAuthRequired(function Members(){
     }
     return order;
   }
-  function handleSubmit(){
+  async function handleSubmit(){
     const newOrder = buildOrder();
-    console.log(newOrder)
+    const response = await fetch('/api/hubspot', {
+      method:'POST',
+      body: JSON.stringify(newOrder),
+      headers: {
+        'Content-Type':'application/json'
+      }
+    })
+    const data = await response.json();
+    console.log(data)
   }
 
   return (
