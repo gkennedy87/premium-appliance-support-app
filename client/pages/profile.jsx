@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Row, Col } from 'reactstrap';
 import { useUser, withPageAuthRequired } from '@auth0/nextjs-auth0/client';
-
 import Loading from '../components/Loading';
 import ErrorMessage from '../components/ErrorMessage';
 import Highlight from '../components/Highlight';
 
 function Profile() {
   const { user, isLoading } = useUser();
-
+  useEffect(() => {
+    console.log(user)
+  },[])
   return (
     <>
       {isLoading && <Loading />}

@@ -1,10 +1,10 @@
 import React from 'react';
 
-const Footer = () => (
+const Footer = ({year}) => (
   <footer className="bg-light p-3 text-center" data-testid="footer">
     <div className="logo" data-testid="footer-logo" />
     <p data-testid="footer-text">
-      Sample project provided by <a href="https://auth0.com">Auth0</a>
+      Powered by <a href="https://premiumappliancesupport.com">Premium Appliance Support ©{year}</a>
     </p>
   </footer>
 );

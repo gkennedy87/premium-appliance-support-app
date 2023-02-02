@@ -4,7 +4,7 @@ import Head from 'next/head';
 
 import NavBar from './NavBar';
 import Footer from './Footer';
-
+const year = new Date().getFullYear()
 const Layout = ({ children }) => (
   <>
     <Head>
@@ -20,7 +20,7 @@ const Layout = ({ children }) => (
     <main id="app" className="d-flex flex-column h-100" data-testid="layout">
       <NavBar />
       <Container className="flex-grow-1 mt-5">{children}</Container>
-      <Footer />
+      <Footer year={year}/>
     </main>
   </>
 );
