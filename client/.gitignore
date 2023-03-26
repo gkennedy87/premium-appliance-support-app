@@ -43,3 +43,6 @@ yarn-error.log*
 /private.key
 /pdfservices-api-credentials.json
 /service-key.json
+
+#misc
+.DS_Store
