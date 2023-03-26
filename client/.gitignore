@@ -42,3 +42,4 @@ yarn-error.log*
 #creds
 /private.key
 /pdfservices-api-credentials.json
+/service-key.json

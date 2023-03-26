@@ -1,10 +1,13 @@
 import React, {useState} from 'react'
+//import axios from 'axios'
 import { withPageAuthRequired } from '@auth0/nextjs-auth0/client'
-import {Stack, Box, TextField, Divider, Button} from '@mui/material'
+//import {Stack, Box, TextField, Divider, Button, Input} from '@mui/material'
+import {Container} from 'reactstrap'
+import HubspotContactForm from '../../components/HubspotContactForm'
 
 
 export default withPageAuthRequired(function Members(){
-  const [firstName, setFirstName] = useState('');
+  /* const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
   const [addressLine2, setAddressLine2] = useState('')
@@ -17,11 +20,7 @@ export default withPageAuthRequired(function Members(){
   const [builder, setBuilder] = useState('')
   const [dealer, setDealer] = useState('')
   const [salesman, setSalesman] = useState('')
-  const [model, setModel] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [brand, setBrand] = useState('')
-  const [serials, setSerials] = useState('')
-  const [serialArr, setSerialArr] = useState([])
+  const [file, setFile] = useState([])
   const [datePurchased, setDatePurchased] = useState(Date.now());
   const [deliveryDate, setDeliveryDate] = useState(Date.now())
 
@@ -59,13 +58,12 @@ export default withPageAuthRequired(function Members(){
   function handleBuilderChange(e) {
     setBuilder(e.target.value)
   }
-  function convertSerialsToArray(e) {
-    const entryArray = e.split(',')
-    console.log(entryArray)
-    return entryArray
+  function handleFileUpload(e) {
+    setFile(e.target.files[0])
+    console.log(file)
   }
+  
   function buildOrder(){
-    const serialNums = convertSerialsToArray(serials)
     const order = {
         customer: {
             firstName: firstName,
@@ -83,35 +81,39 @@ export default withPageAuthRequired(function Members(){
             builder: builder,
             dealer: dealer,
             salesman: salesman,
-            brand: brand,
-            model: model,
-            quantity: quantity,
-            serialNumbers: serialNums,
             datePurchased: datePurchased,
             deliveryDate: deliveryDate
         }
     }
-    return order;
-  }
-  async function handleSubmit(){
+    return JSON.stringify(order);
+  } */
+  /* async function handleSubmit(){
     const newOrder = buildOrder();
-    const response = await fetch('/api/hubspot', {
-      method:'POST',
-      body: JSON.stringify(newOrder),
-      headers: {
-        'Content-Type':'application/json'
-      }
-    })
-    const data = await response.json();
+    //const orderJSON = JSON.parse(newOrder)
+    console.log(newOrder)
+    const formData = new FormData();
+    formData.append('data', newOrder );
+    formData.append('file', file)
+    console.log(formData)
+
+    const config = {
+      headers: {'content-type':'multipart/form-data'},
+      onUploadProgress: (e) => console.log(`Current Progress:`, Math.round((e.loaded*100 / e.total)))
+    }
+    const response = await axios.post('/api/hubspot', formData, config)
+    const data = await response.status;
     console.log(data)
-  }
+  } */
 
   return (
-    <Stack alignItems='center'>
-        <h1>Input Customer Invoice</h1>
+    <Container className='d-flex flex-column justify-content-center' >
+        <h1>Add New Customer</h1>
         <br/>
-        <Stack direction='column' px={5} py={3} spacing={2} maxWidth={550} sx={{borderTop:'1px solid #00000020'}}>
-            <h2>Customer Info</h2>
+        <Container>
+
+          <HubspotContactForm />
+
+          {/* <h2>Customer Info</h2>
             <Stack direction='row' spacing={2}>
                 <TextField 
                     id='firstName'
@@ -227,43 +229,15 @@ export default withPageAuthRequired(function Members(){
                 value={salesman}
                 onChange={e => setSalesman(e.target.value)} 
             />
-            <TextField 
-                id='brand'
-                name='brand'
-                type='text'
-                label='Brand Purchased'
-                value={brand}
-                onChange={e => setBrand(e.target.value)} 
-            />
             <Stack direction='row' spacing={2}>
-                <TextField 
-                    id='Model'
-                    name='model'
-                    type='text'
-                    label='Model'
-                    value={model}
-                    onChange={e => setModel(e.target.value)} 
-                />
-                <TextField 
-                    id='quantity'
-                    name='quanity'
-                    type='text'
-                    label='Quantity'
-                    value={quantity}
-                    onChange={e => setQuantity(e.target.value)}
-                    pattern="[0-9]{2}" 
-                />
+              <Input 
+                id='invoice'
+                name='invoice'
+                type='file' 
+                accept='application/pdf' 
+                onChange={e => handleFileUpload(e)} 
+              />
             </Stack>
-            <TextField 
-                id='serials'
-                name='serials'
-                type='text'
-                label='Serial Numbers'
-                value={serials}
-                onChange={e => setSerials(e.target.value)} 
-                helperText='Use commas to separate multiple entries'
-                height={60}
-            />
             <Stack direction='row' spacing={2}>
                 <TextField 
                     id='datePurchased'
@@ -289,8 +263,9 @@ export default withPageAuthRequired(function Members(){
                 onClick={handleSubmit} 
                 fullWidth size='large'
                 variant='contained'
-                sx={{color:'#fff', backgroundColor:'#0e0e0e'}}>Submit</Button>
-        </Stack>
-    </Stack>
+                sx={{color:'#fff', backgroundColor:'#0e0e0e'}}>Submit</Button> */}
+                
+        </Container>
+    </Container>
   )
 })

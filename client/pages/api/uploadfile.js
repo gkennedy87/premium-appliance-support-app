@@ -1,4 +1,4 @@
-const PDFServicesSdk = require('@adobe/pdfservices-node-sdk');
+/* const PDFServicesSdk = require('@adobe/pdfservices-node-sdk');
 
 export default function uploadPDF(req, res) {
     const file = req.file;
@@ -45,4 +45,4 @@ export default function uploadPDF(req, res) {
 
                 }
             });
-    }
+    } */

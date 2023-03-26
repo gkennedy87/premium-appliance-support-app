@@ -1,8 +1,71 @@
 import { withApiAuthRequired} from '@auth0/nextjs-auth0'
-import e from 'express';
-
+import axios from 'axios';
 const hubspot = require('@hubspot/api-client')
 const hubspotClient = new hubspot.Client({ accessToken: process.env.HUBSPOT_KEY })
+const formidable = require('formidable')
+const {Storage} = require('@google-cloud/storage');
+const fs = require('fs')
+
+export const config = {
+    api: {
+        bodyParser: false
+    }
+}
+
+const storage = new Storage({keyFilename: 'service-key.json'});
+const bucketName = 'blastoise-starfish';
+
+// Helper Functions Start
+async function uploadFileToGCS(file){
+    const generationMatchPrecondition = 0
+    const options = {
+        destination: `${file.newFilename}_invoice`,
+        preconditionOpts: {ifGenerationMatch: generationMatchPrecondition},
+    }
+    try {
+        const resp = await storage.bucket(bucketName).upload(file.filepath, options);
+        const filename = resp[0].name
+            // These options will allow temporary read access to the file
+        const URLoptions = {
+            version: 'v2', // defaults to 'v2' if missing.
+            action: 'read',
+            expires: Date.now() + 1000 * 60 * 60, // one hour
+        };
+        
+            // Get a v2 signed URL for the file
+        const [url] = await storage
+            .bucket(bucketName)
+            .file(filename)
+            .getSignedUrl(URLoptions);        
+        return url;
+    } catch {
+        console.error()
+    }
+   
+}
+
+async function uploadFileHubspot(filename,url){
+    const ImportFromUrlInput = { 
+        access: "PUBLIC_NOT_INDEXABLE", 
+        ttl: "P12M", 
+        name: `${filename}_invoice.pdf`, 
+        url: url, 
+        folderPath: "docs", 
+        duplicateValidationStrategy: "NONE", 
+        duplicateValidationScope: "ENTIRE_PORTAL",
+        type:'pdf', 
+        overwrite: true };
+
+    try {
+      const apiResponse = await hubspotClient.files.filesApi.importFromUrl(ImportFromUrlInput);
+      return apiResponse;
+    } catch (e) {
+      e.message === 'HTTP request failed'
+        ? console.error(JSON.stringify(e.response, null, 2))
+        : console.error(e)
+    }
+}
+
 async function findContact(target){
         const limit = 100;
         const after = undefined;
@@ -44,61 +107,17 @@ async function findCompany(com) {
     }
 }
 
-async function createAssociation(userId,companyId, dealId) {
-   
-    /* dealObj.associations = [
-        {
-            "to": {
-               "id": parseInt(companyId)
-             },
-             "types": [
-               {
-                 "associationCategory": "HUBSPOT_DEFINED",
-                 "associationTypeId": 5
-               } ]
-           }, 
-           {
-            "to": {
-               "id": parseInt(userId)
-             },
-             "types": [
-               {
-                 "associationCategory": "HUBSPOT_DEFINED",
-                 "associationTypeId": 3
-               } ]
-       }
-    ] */
-
-    const company = "company";
-    const CompAssociationSpec = [
-    {
-        "associationCategory": "HUBSPOT_DEFINED",
-        "associationTypeId": 5
+async function createAssociation(userId,companyId) {
+    try {
+        const createdAssociation = await hubspotClient.crm.companies.associationsApi.create(companyId, 'contacts', userId, [{"associationCategory":"HUBSPOT_DEFINED", "associationTypeId":2}])
+        return createdAssociation
     }
-    ];
-    const user = "user"
-    const UserAssociationSpec = [
-        {
-            "associationCategory": "HUBSPOT_DEFINED",
-            "associationTypeId": 3
-        }
-        ];
-    const companyAssociationRes = await hubspotClient.crm.deals.associationsApi.create(dealId, "company", companyId, CompAssociationSpec);
-    const contactAssociationRes = await hubspotClient.crm.deals.associationsApi.create(dealId, "user", userId, UserAssociationSpec);
-    if (companyAssociationRes && contactAssociationRes) {
-        return true
-    } else {
-        return false
+    catch (err) {
+        console.error(err)
     }
 }
 
-export default withApiAuthRequired( async function handler(req,res){
-    if (!req.body) {
-        res.status(400).json({
-            message: 'No empty requests'
-        })
-    }
-    const data = req.body;
+function createContactObj(data) {
     const contactObj = {
         properties: {
             firstname: data.customer.firstName,
@@ -110,131 +129,179 @@ export default withApiAuthRequired( async function handler(req,res){
             builder: data.deal.builder,
         },
     }
+    return contactObj;
+}
+
+function createCompanyObj(data) {
     const companyObj = {
         properties: {
             name: data.deal.dealer,
             salesperson: data.deal.salesperson
         },
     }
+    return companyObj
+}
+//Helper Functions End 
 
-    let dealObject = {
-        properties: {
-            "dealname": String(contactObj.properties.firstname+' '+contactObj.properties.lastname),
-            "closedate":String(data.deal.datePurchased),
-            "delivery_date": String(data.deal.deliveryDate),
-            "brand": String(data.deal.brand),
-            "model": String(data.deal.model),
-            "quantity_purchased": String(data.deal.quantity),
-            "dealstage": "closedwon",
-            "pipeline":"default",
-            "serial_numbers": String(data.deal.serialNumbers),
-            "hubspot_owner_id": "283191206",
-        },
-    }
+// Main Function
+export default withApiAuthRequired( async function handler (req,res){
       
     try {
-        const foundContact = await findContact(contactObj.properties.email)
-        if (foundContact) {
-            const contactId = foundContact.hs_object_id
-            const foundCompany = await findCompany(companyObj);
-            if (foundCompany) {
-                const dealApi = await hubspotClient.crm.deals.basicApi.create(dealObject);
-                if (dealApi) {
-                    const associations = await createAssociation(foundContact.hs_object_id, foundCompany.hs_object_id,dealApi.id)
-                        if (associations) {
-                            res.status(200).json(
-                                {
-                                    message:'success', data:{dealApi, associations}
-                                }
-                            )
-                        } else {
-                            res.status(400).json({
-                                message: 'No association created'
-                            })
-                        }
-                } else {
-                    res.status(400).json(
-                        {
-                            message: 'Bad request'
-                        }
-                    )
+        const form = formidable();
+        form.parse(req,async (err,fields,files) => {
+            const data = JSON.parse(fields.data)
+            const file = files.file
+            const uploaded = await uploadFileToGCS(file)
+            const invoice = await uploadFileHubspot(file.newFilename,uploaded)
+            const contact = createContactObj(data);
+            const company = createCompanyObj(data);
+            const foundContact = await findContact(contact.properties.email)
+            const foundCompany = await findCompany(company)
+            const invoiceID = invoice?.id;
+            if (!foundContact && !foundCompany) {
+                const newContact = await hubspotClient.crm.contacts.basicApi.create(contact);
+                const newCompany = await hubspotClient.crm.companies.basicApi.create(company);
+                const contactId = JSON.parse(newContact.id);
+                if (newContact && newCompany) {
+                    await createAssociation(newContact.id, newCompany.id)
                 }
-            } else {
-                const companyApi = await hubspotClient.crm.companies.basicApi.create(companyObj);
-                if (companyApi) {
-                   // const dealWithAssociations = await createAssociation(foundContact.hs_object_id, companyApi.id,dealObject)
-                    const dealApi = await hubspotClient.crm.deals.basicApi.create(dealObject);
-                    if (dealApi) {
-                        const associations = await createAssociation(foundContact.hs_object_id, companyApi.id,dealApi.id)
-                        if (associations) {
-                            res.status(200).json(
-                                {
-                                    message:'success', data:{dealApi, associations}
-                                }
-                            )
-                        } else {
-                            res.status(400).json({
-                                message: 'No association created'
-                            })
-                        }
-                        
+                if (invoice) {
+                    console.log(invoice)
+                    const noteProperties = {
+                        "properties":{
+                            "hubspot_owner_id":"283191206",
+                            "hs_timestamp": Date.now(),
+                            "hs_note_body":"",
+                            "hs_attachment_ids":invoice?.id
+                        },
+                        "associations":{
+                            "to":[{"id":contactId}],
+                            "types": [{"associationCategory":"HUBSPOT_DEFINED","associationTypeId":10}],
+                        },
+                        "attachments": [
+                            {
+                                "id": invoiceID
+                            }
+                        ]
+                    }
+                    const note = await hubspotClient.crm.objects.notes.basicApi.create(noteProperties)
+                    if (note) {
+                            console.log(note)
+                            res.status(200).json({
+                                message:"Success"
+                            }) 
                     } else {
                         res.status(400).json({
-                            message:'Bad request'
+                            message:"Problem uploading invoice. Error code: 01"
                         })
                     }
+
                 } else {
                     res.status(400).json({
-                        message:'bad request'
+                        message:"Problem uploading invoice. Error code: 01A"
                     })
                 }
             }
-        } else {
-            const contactApiResponse = await hubspotClient.crm.contacts.basicApi.create(contactObj);
-            if (contactApiResponse) {
-                const companyApiResponse = await hubspotClient.crm.companies.basicApi.create(companyObj);
-                if (companyApiResponse) {
-                    const contactId = contactApiResponse.id
-                    const companyId = companyApiResponse.id
-                   // const dealWithAssociations = await createAssociation(contactId,companyId,dealObject)
-                    console.log(dealWithAssociations)
-                    const dealApi = await hubspotClient.crm.deals.basicApi.create(dealObject);
-                    if (dealApi) {
-                        const associations = await createAssociation(contactId, companyId,dealApi.id)
-                        if (associations) {
-                            res.status(200).json(
-                                {
-                                    message:'success', data:{dealApi, associations}
-                                }
-                            )
-                        } else {
-                            res.status(400).json({
-                                message: 'No association created'
-                            })
-                        }
-                    } else {
-                        res.status(400).json(
+
+           else if (!foundContact && foundCompany) {
+                const newContact = await hubspotClient.crm.contacts.basicApi.create(contact);
+                const contactId = JSON.parse(newContact.id);
+                if (newContact) {
+                    await createAssociation(contactId, foundCompany.id)
+                }
+                if (invoice) {
+                    console.log(invoice)
+                    const noteProperties = {
+                        "properties":{
+                            "hubspot_owner_id":"283191206",
+                            "hs_timestamp": Date.now(),
+                            "hs_note_body":"",
+                            "hs_attachment_ids":invoice?.id
+
+                        },
+                        "associations":{
+                            "to":[{"id":contactId}],
+                            "types": [{"associationCategory":"HUBSPOT_DEFINED","associationTypeId":10}]
+                        },
+                        "attachments": [
                             {
-                                message: 'Bad request'
+                                "id": invoiceID
                             }
-                        )
+                        ]
                     }
-                }
-                else {
+                    const note = await hubspotClient.crm.objects.notes.basicApi.create(noteProperties)
+                    if (note) {
+                        console.log(note)
+                        res.status(200).json({
+                            message:"Success"
+                        })
+                    } else {
+                        res.status(503).json({
+                            message:"Problem uploading invoice. Error code: 02"
+                        })
+                    }
+
+                } else {
                     res.status(400).json({
-                        message: 'Bad Request.'
+                        message:"Problem uploading invoice. Error code: 02A"
                     })
                 }
-    
-            } else {
-                res.status(400).json({
-                    message: "Bad Request"
-                })
+
             }
-        }
+
+            else if (foundContact && foundCompany) {
+                const contactId = JSON.parse(foundContact.id);
+                if (invoice) {
+                    const noteProperties = {
+                        "properties":{
+                            "hubspot_owner_id":"283191206",
+                            "hs_timestamp": Date.now(),
+                            "hs_note_body":"",
+                            "hs_attachment_ids":invoice?.id
+
+                        },
+                        "associations":{
+                            "to":[{"id":contactId}],
+                            "types": [{"associationCategory":"HUBSPOT_DEFINED","associationTypeId":10}]                        
+                        },
+                        "attachments": [
+                            {
+                                "id": invoiceID
+                            }
+                        ]
+                    }
+                    const note = await hubspotClient.crm.objects.notes.basicApi.create(noteProperties)
+                    if (note) {
+                        console.log(note)
+                        res.status(200).json({
+                            message:"Success"
+                        })
+                    } else {
+                        res.status(503).json({
+                            message:"Problem uploading invoice. Error code: 03"
+                        })
+                    }
+
+                } else {
+                    res.status(400).json({
+                        message:"Problem uploading invoice. Error code: 03A"
+                    })
+                }
+            }
+
+            if (err) {
+                console.log(err);
+                res.status(400).json({message:'Bad Request'})
+            }
+            if (!fields && !files) {
+                res.status(400).json({message:'No empty requests'})
+            }
+        })
+      
         } catch (err) {
         err.message === 'HTTP request failed'
             ? res.status(400).json(err.message)
             : console.error(err)
         }
 });
+// End Main Function

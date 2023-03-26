@@ -1,10 +1,8 @@
 import React from 'react';
 
 import Hero from '../components/Hero';
-import Content from '../components/Content';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Stack, Button } from '@mui/material';
-import Link from 'next/link';
 
 export default function Index() {
   const {user, isLoading} = useUser();

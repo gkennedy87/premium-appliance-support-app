@@ -23,11 +23,10 @@ const NavBar = () => {
   const toggle = () => setIsOpen(!isOpen);
 
   return (
-    <div className="nav-container" data-testid="navbar">
-      <Navbar color="light" light expand="md">
-        <Container>
-          <NavbarBrand className="logo" />
-          <NavbarToggler onClick={toggle} data-testid="navbar-toggle" />
+    <div data-testid="navbar" >
+      <Navbar color="light" light expand="md" className='px-5'>
+          <NavbarBrand href='/' className='nav-link me-auto'>Luxury Appliance Support</NavbarBrand>
+          <NavbarToggler onClick={toggle} data-testid="navbar-toggle" className='me-2'/>
           <Collapse isOpen={isOpen} navbar>
             <Nav className="mr-auto" navbar data-testid="navbar-items">
               <NavItem>
@@ -38,12 +37,7 @@ const NavBar = () => {
               {user && (
                 <>
                   <NavItem>
-                    <PageLink href="/upload" className="nav-link" testId="navbar-external">
-                      Coming Soon
-                    </PageLink>
-                  </NavItem>
-                  <NavItem>
-                    <PageLink href="/manualInput" className="nav-link" testId="navbar-external">
+                    <PageLink href="/addcustomer" className="nav-link" testId="navbar-external">
                       Add Customer
                     </PageLink>
                   </NavItem>
@@ -143,7 +137,6 @@ const NavBar = () => {
               </Nav>
             )}
           </Collapse>
-        </Container>
       </Navbar>
     </div>
   );
