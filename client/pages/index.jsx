@@ -19,9 +19,8 @@ export default function Index() {
       {user ? 
         <>
           <Hero name={capitalizeFirstLetter(user.nickname)}/>
-          <Stack direction='row' gap={2} sx={{justifyContent:'center'}}>
-            <Button variant="contained" href='/manualInput'>Add New Customer</Button>
-            <Button variant='contained' disabled>Upload PDF - Coming Soon</Button>
+          <Stack direction='row' mb={3} gap={2} sx={{justifyContent:'center'}}>
+            <Button variant="contained" href='/addcustomer'>Add New Customer</Button>
           </Stack>
         </>
         :
