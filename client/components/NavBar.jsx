@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Image from 'next/image'
+import logo from '../public/images/logo.png'
 import {
   Collapse,
   Container,
@@ -25,7 +27,18 @@ const NavBar = () => {
   return (
     <div data-testid="navbar" >
       <Navbar color="light" light expand="md" className='px-5'>
-          <NavbarBrand href='/' className='nav-link me-auto'>Luxury Appliance Support</NavbarBrand>
+          <NavbarBrand href='/' className='nav-link me-auto'>
+            <Image 
+              alt='logo'
+              src={logo}
+              width={50}
+              height={60}
+              style={{
+                marginRight:"10px"
+              }}
+            />
+            Luxury Appliance Support
+          </NavbarBrand>
           <NavbarToggler onClick={toggle} data-testid="navbar-toggle" className='me-2'/>
           <Collapse isOpen={isOpen} navbar>
             <Nav className="mr-auto" navbar data-testid="navbar-items">
