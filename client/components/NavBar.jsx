@@ -26,18 +26,17 @@ const NavBar = () => {
 
   return (
     <div data-testid="navbar" >
-      <Navbar color="light" light expand="md" className='px-5'>
-          <NavbarBrand href='/' className='nav-link me-auto'>
+      <Navbar color="light" light expand="md" className='px-3'>
+          <NavbarBrand href='/' className='nav-link ml-2'>
             <Image 
               alt='logo'
               src={logo}
-              width={50}
-              height={60}
+              width={60}
+              height={70}
               style={{
                 marginRight:"10px"
               }}
             />
-            Luxury Appliance Support
           </NavbarBrand>
           <NavbarToggler onClick={toggle} data-testid="navbar-toggle" className='me-2'/>
           <Collapse isOpen={isOpen} navbar>
