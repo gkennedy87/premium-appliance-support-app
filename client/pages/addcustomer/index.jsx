@@ -106,7 +106,7 @@ export default withPageAuthRequired(function Members(){
   } */
 
   return (
-    <Container className='d-flex flex-column justify-content-center' >
+    <Container className='d-flex flex-column justify-content-center pb-5' >
         <h1>Add New Customer</h1>
         <br/>
         <Container>
