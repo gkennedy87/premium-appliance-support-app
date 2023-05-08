@@ -37,3 +37,7 @@ p code {
 .result-block-container .result-block {
   opacity: 1;
 }
+
+footer {
+  min-height: fit-content;
+}
